@@ -1,0 +1,36 @@
+﻿<MudThemeProvider />
+<MudNavMenu>
+    <MudNavLink Href="/"
+            Style="width: auto"
+            Icon="@Icons.Material.Rounded.Home"
+            IconColor="Color.Primary"
+            Match="NavLinkMatch.All">
+        <MudText Typo="Typo.subtitle1" Class="m-md-auto">首页</MudText>
+    </MudNavLink>
+    <MudNavLink Href="/counter"
+            Style="width: auto"
+            Icon="@Icons.Material.Rounded.Add"
+            IconColor="Color.Primary"
+            Match="NavLinkMatch.All">
+        <MudText Typo="Typo.subtitle1" Class="m-md-auto">计数器</MudText>
+    </MudNavLink>
+    <MudSpacer/>
+</MudNavMenu>
+@code {
+    private readonly MudTheme theme = new()
+    {
+        PaletteLight = new PaletteLight()
+        {
+            Primary = "#5E35B1",
+            Secondary = "#FFFFFF",
+            Tertiary = "#B388FF",
+            TextPrimary = "#212121",
+            TextSecondary = "#101010",
+            Background = "#EDE7F6",
+        },
+        PaletteDark = new PaletteDark()
+        {
+            
+        }
+    };
+}

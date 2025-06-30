@@ -1,0 +1,143 @@
+﻿@page "/"
+@inject WindowService WindowService
+@inject IJSRuntime JSRuntime
+<MudThemeProvider Theme="@theme"/>
+<div>
+    <MudText Typo="Typo.h5" Color="Color.Primary">
+        @(__builder0 =>{
+            __builder0.AddContent(0, $"(JS)鼠标屏幕位置 X={mouseScreenX}, Y={mouseScreenY}");
+        })
+    </MudText>
+    <MudText Typo="Typo.h5" Color="Color.Primary">
+        @(__builder1 =>
+        { 
+            __builder1.AddContent(0, $"(Win32 API)窗口位置 Left={windowLeft}, Top={windowTop}, Botton={windowBottom}, Right={windowRight}"); 
+        })
+    </MudText>
+    <MudText Typo="Typo.h5" Color="Color.Primary">
+        @(__builder2 => {
+            __builder2.AddContent(0, $"(Win32 API)屏幕 Width={screenWidth}, Height={screenHeight}, Scale={scale}");
+        })
+    </MudText>
+    <MudText Typo="Typo.h5" Color="Color.Primary">
+        @(__builder3 => 
+        { 
+            __builder3.AddContent(0, $"(Win32API)鼠标 X={mouseX}, Y={mouseY}"); 
+        })
+    </MudText>
+    <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="@OnButtonClick">
+        @(isListening ? "停止监听" : "开始监听(Win32 API)")
+    </MudButton>
+</div>
+
+
+@code{
+    private string buttonText = "Start";
+    private int mouseScreenX = 0;
+    private int mouseScreenY = 0;
+    private int windowLeft = 0;
+    private int windowTop = 0;
+    private int windowBottom = 0;
+    private int windowRight = 0;
+    private int screenWidth = 0;
+    private int screenHeight = 0;
+    private double scale = 1.0;
+    private int mouseX = 0;
+    private int mouseY = 0;
+    private DotNetObjectReference<Home>? objRef;
+    private bool isListening = false;
+    private CancellationTokenSource? listeningCts;
+
+    [JSInvokable]
+    public Task OnGlobalMouseMove(int screenX, int screenY)
+    {
+        mouseScreenX = screenX;
+        mouseScreenY = screenY;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+    private readonly MudTheme theme = new()
+    {
+        PaletteLight = new PaletteLight()
+        {
+            Primary = "#5E35B1",
+            Secondary = "#FFFFFF",
+            Tertiary = "#B388FF",
+            TextPrimary = "#212121",
+            TextSecondary = "#101010",
+            Background = "#EDE7F6",
+        },
+        PaletteDark = new PaletteDark()
+        {
+            
+        }
+    };
+    private void OnButtonClick()
+    {
+        if(isListening)
+        {
+            isListening = false;
+            listeningCts?.Cancel();
+            listeningCts?.Dispose();
+            listeningCts = null;
+            windowLeft = 0;
+            windowTop = 0;
+            windowBottom = 0;
+            windowRight = 0;
+            screenWidth = 0;
+            screenHeight = 0;
+            scale = 1.0;
+            mouseX = 0;
+            mouseY = 0;
+        }
+        else
+        {
+            isListening = true;
+            listeningCts = new CancellationTokenSource();
+            _ = ListeningInfo(listeningCts.Token);
+
+        }
+    }
+    private async Task ListeningInfo(CancellationToken token)
+    {
+        try
+        {
+            while (!token.IsCancellationRequested)
+            {
+                await Task.Delay(10, token);
+                (int Left, int Top, int Bottom, int Right) = WindowService.GetWindowPositon();
+                windowLeft = Left;
+                windowTop = Top;
+                windowBottom = Bottom;
+                windowRight = Right;
+                (int width, int height) = WindowService.GetScreenSize();
+                screenWidth = width;
+                screenHeight = height;
+                scale = WindowService.GetScreenScale();
+                (mouseX, mouseY) = WindowService.GetCursorPosition();
+                StateHasChanged();
+            }
+        }
+        catch (TaskCanceledException)
+        {
+            // 正常取消
+        }
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        base.OnAfterRender(firstRender);
+        if (firstRender)
+        {
+            objRef = DotNetObjectReference.Create(this);
+            await JSRuntime.InvokeVoidAsync("mouseInterop.subscribeMouseMove", objRef);
+        }
+    }
+    public async ValueTask DisposeAsync()
+    {
+        if (objRef != null)
+        {
+            await JSRuntime.InvokeVoidAsync("mouseInterop.unsubscribeMouseMove", objRef);
+            objRef?.Dispose();
+        }
+    }
+}

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Window xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:model="clr-namespace:maui_template.ForWindows.ViewModels"
+             xmlns:local="clr-namespace:maui_template"
+             x:Class="maui_template.ForWindows.Windows.MainWindow"
+             x:DataType="model:MainWindowVM"
+             Title="MainWindow"
+             Height="800"
+             Width="1200">
+    <Window.BindingContext>
+        <model:MainWindowVM/>
+    </Window.BindingContext>
+    <Window.Page>
+        <local:MainPage />
+    </Window.Page>
+    <Window.TitleBar>
+        <TitleBar x:Name="titleBar"
+          BackgroundColor="#5E35B1"
+          ForegroundColor="#5E35B1"
+          HeightRequest="0">
+        </TitleBar>
+    </Window.TitleBar>
+</Window>

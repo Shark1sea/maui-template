@@ -1,0 +1,148 @@
+﻿@using maui_template.Components.Shared
+@inject WindowService WindowService
+@inject IDialogService DialogService
+@inject IJSRuntime JSRuntime
+@inherits LayoutComponentBase
+<MudPopoverProvider />
+<MudThemeProvider Theme="@theme" @bind-IsDarkMode="@isDarkMode"/>
+<MudDialogProvider />
+<MudSnackbarProvider />
+<MudLayout>
+    <MudAppBar Color="Color.Primary"
+               Elevation="25"
+               Dense="true"
+               @onmousedown="OnMouseDown"
+               @onmouseup ="OnMouseUp">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
+        <MudText Typo="Typo.h6" Class="ml-3"><b>Application</b></MudText>
+        <MudSpacer />
+        <MudButton OnClick="@MinimizeWindow">
+            <MudIcon Icon="@Icons.Material.Rounded.Minimize" Style="@WhiteStyle" Size="Size.Small" />
+        </MudButton>
+        <MudButton OnClick="@MaximizeWindow">
+            <MudIcon Icon="@Icons.Material.Outlined.CropSquare" Style="@WhiteStyle" Size="Size.Small" />
+        </MudButton>
+        <MudButton OnClick="@CloseWindow">
+            <MudIcon Icon="@Icons.Material.Rounded.Close" Style="@WhiteStyle" Size="Size.Medium" />
+        </MudButton>
+    </MudAppBar>
+    <MudDrawer @bind-Open="drawerOpen" ClipMode="DrawerClipMode.Docked" Elevation="4">
+        <NavMenu></NavMenu>
+    </MudDrawer>
+    <MudMainContent>
+        <MudContainer MaxWidth="MaxWidth.Large" Class="pa-4">
+            @Body
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+@code{
+    private string WhiteStyle => $"color:{theme.PaletteLight.Secondary}";
+    private string negativeStyle => $"color:{theme.PaletteLight.Background}";
+    private bool isDarkMode = false;
+    private bool drawerOpen = false;
+    private bool isMouseMoving = false;
+    private DotNetObjectReference<MainLayout>? objRef;
+    private readonly MudTheme theme = new()
+    {
+        PaletteLight = new PaletteLight()
+        {
+            Primary = "#5E35B1",
+            Secondary = "#FFFFFF",
+            Tertiary = "#B388FF",
+            TextPrimary = "#212121",
+            TextSecondary = "#101010",
+            Background = "#EDE7F6",
+        },
+        PaletteDark = new PaletteDark()
+        {
+            
+        }
+    };
+
+    private void DrawerToggle()
+    {
+        drawerOpen = !drawerOpen;
+    }
+    private async Task OnMouseDown(MouseEventArgs e)
+    {
+        if (e.Button == 0 && e.Buttons == 1)
+        {
+            isMouseMoving = true;
+            WindowService.StartWindowMove();
+            await JSRuntime.InvokeVoidAsync("mouseDragInterop.startDrag", objRef);
+        }
+    }
+    // 待完成：双击最大化窗口，目前无效果
+    private async Task OnMouseUp(MouseEventArgs e)
+    {
+        if (e.Button == 0 && e.Buttons == 1 && e.Detail == 2 && !isMouseMoving)
+        {
+            WindowService.MaximizeWindow();
+        }
+    }
+    [JSInvokable]
+    public void OnGlobalMouseMove()
+    {
+        if (isMouseMoving)
+        {
+            WindowService.MoveWindow();
+        }
+    }
+
+    [JSInvokable]
+    public void OnGlobalMouseUp()
+    {
+        if (isMouseMoving)
+        {
+            isMouseMoving = false;
+            WindowService.EndWindowMove();
+        }
+    }
+    private void MinimizeWindow(MouseEventArgs e)
+    {
+        WindowService.MinimizeWindow();
+    }
+    private void MaximizeWindow(MouseEventArgs e)
+    {
+        WindowService.MaximizeWindow();
+    }
+    private async Task CloseWindow(MouseEventArgs e)
+    {
+        var options = new DialogOptions
+        {
+            CloseButton = true,
+            FullWidth = false,
+            MaxWidth = MaxWidth.Medium
+        };
+        var dialog = await DialogService.ShowAsync<CloseDialog>("确认关闭程序？", options);
+        var result = await dialog.Result;
+        if (result == null) return;
+        var data = result.Data as bool?;
+        var cancled = result.Canceled;
+        if (data == true && !cancled)
+        {
+            WindowService.QuitApplication();
+        }
+        else if (data == false && !cancled)
+        {
+            WindowService.MinimizeToTray();
+        }
+        else if (cancled)
+        {
+
+        } 
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        base.OnAfterRender(firstRender);
+        if (firstRender)
+        {
+            objRef = DotNetObjectReference.Create(this);
+            await Task.CompletedTask;
+        }
+    }
+    public async ValueTask DisposeAsync()
+    {
+        await Task.CompletedTask;
+    }
+}
